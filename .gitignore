@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.db
+*.sqlite3
+
+# Runtime-generated pipeline artifacts (per use-case/experiment UUID dirs:
+# raw/encoded parquet, trained model.joblib, profiling/training/decisions
+# json) — none of this is source, all of it regenerates from a pipeline run.
+apps/api/data/*/
+!apps/api/data/.gitkeep
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Env
+.env
+.env.local
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

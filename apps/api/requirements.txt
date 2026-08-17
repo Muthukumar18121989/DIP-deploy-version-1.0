@@ -1,0 +1,14 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+sqlalchemy==2.0.36
+pandas==2.2.3
+numpy==2.2.1
+scipy==1.14.1
+scikit-learn==1.6.0
+xgboost>=3.3.0
+statsmodels==0.14.4
+faker==33.1.0
+pyarrow==18.1.0
+python-multipart==0.0.20
+openpyxl==3.1.5

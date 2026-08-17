@@ -1,0 +1,204 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --color-background: #08080c;
+  --color-background-elevated: #0e0e15;
+  --color-surface: #121218;
+  --color-surface-hover: #17171f;
+  --color-border: #23232e;
+  --color-border-strong: #2f2f3d;
+
+  --color-foreground: #f4f4f6;
+  --color-foreground-muted: #a3a3b2;
+  --color-foreground-subtle: #6b6b78;
+
+  --color-primary: #7c6cf6;
+  --color-primary-hover: #8f80ff;
+  --color-primary-foreground: #ffffff;
+
+  --color-accent: #22d3ee;
+  --color-accent-foreground: #04222a;
+
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+
+  /* Chart palette — dark-mode categorical order, CVD-validated (dataviz skill) */
+  --color-chart-1: #3987e5; /* blue */
+  --color-chart-2: #008300; /* green */
+  --color-chart-3: #d55181; /* magenta */
+  --color-chart-4: #c98500; /* yellow */
+  --color-chart-5: #199e70; /* aqua */
+  --color-chart-6: #d95926; /* orange */
+  --color-chart-7: #9085e9; /* violet */
+  --color-chart-8: #e66767; /* red */
+
+  --color-chart-good: #0ca30c;
+  --color-chart-warning: #fab219;
+  --color-chart-critical: #d03b3b;
+
+  --color-chart-diverging-neg: #3987e5;
+  --color-chart-diverging-pos: #e66767;
+  --color-chart-diverging-mid: #383835;
+
+  --breakpoint-xs: 640px;
+  --breakpoint-sm: 768px;
+  --breakpoint-md: 1024px;
+  --breakpoint-lg: 1280px;
+  --breakpoint-xl: 1536px;
+}
+
+/* Light theme — a monochrome enterprise look (black/white/neutral gray,
+ * strong typography, minimal decoration), selected via Settings → Appearance
+ * and toggled by setting `data-theme="light"` on <html> (see App.tsx). Every
+ * component already reads these as semantic tokens (bg-background,
+ * text-foreground, border-border, …), so overriding the variables here is
+ * the entire theme — nothing in any component needs to change. Dark mode
+ * above is untouched. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-background: #fafaf9;
+  --color-background-elevated: #f5f5f3;
+  --color-surface: #eeeeec;
+  --color-surface-hover: #e5e5e2;
+  --color-border: #e0e0dc;
+  --color-border-strong: #c9c9c4;
+
+  --color-foreground: #0b0b0a;
+  --color-foreground-muted: #52514e;
+  --color-foreground-subtle: #898781;
+
+  --color-primary: #6d5cf0;
+  --color-primary-hover: #5c4ce0;
+  --color-primary-foreground: #ffffff;
+
+  --color-accent: #0e7490;
+  --color-accent-foreground: #ffffff;
+
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #dc2626;
+
+  /* Chart palette — dataviz skill's validated light-mode categorical order */
+  --color-chart-1: #2a78d6;
+  --color-chart-2: #008300;
+  --color-chart-3: #e87ba4;
+  --color-chart-4: #eda100;
+  --color-chart-5: #1baf7a;
+  --color-chart-6: #eb6834;
+  --color-chart-7: #4a3aa7;
+  --color-chart-8: #e34948;
+
+  --color-chart-diverging-neg: #2a78d6;
+  --color-chart-diverging-pos: #e34948;
+  --color-chart-diverging-mid: #f0efec;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(circle at 15% -10%, rgba(124, 108, 246, 0.14), transparent 42%),
+      radial-gradient(circle at 90% 5%, rgba(34, 211, 238, 0.09), transparent 40%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  /* Light mode: flat, not glowing — "clean grid, data-first" per the
+   * Appearance spec, instead of the dark theme's subtle gradient glow. */
+  :root[data-theme="light"] body {
+    background-image: none;
+  }
+
+  ::selection {
+    background: rgba(124, 108, 246, 0.35);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-foreground-subtle);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Light mode gets a flat bordered surface instead of frosted glass — the
+   * translucent-white trick that reads as "glass" on a dark page would just
+   * be invisible (or muddy) on a near-white one, and the spec explicitly
+   * wants glassmorphism/heavy shadows avoided in light mode. */
+  :root[data-theme="light"] .glass {
+    background: var(--color-background-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--color-border);
+  }
+  :root[data-theme="light"] .glass-strong {
+    background: var(--color-background-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--color-border-strong);
+  }
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
