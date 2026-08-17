@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,7 +21,17 @@ export default function PipelineView() {
   const { data: useCase } = useUseCase(id);
 
   const run = usePipelineRun(id);
-  const { runPipeline, selectStage } = usePipelineStore();
+  const { runPipeline, selectStage, restoreRun, stopRestorePolling } = usePipelineStore();
+
+  // This tab may never have seen the run that produced this use case's
+  // decisions — restoreRun pulls the most recent one back from the server. It
+  // never overwrites a live run, and keeps re-checking while one is still in
+  // flight elsewhere, so a mid-run reload catches up instead of freezing.
+  useEffect(() => {
+    if (!id) return;
+    void restoreRun(id);
+    return () => stopRestorePolling(id);
+  }, [id, restoreRun, stopRestorePolling]);
 
   function startRun() {
     if (!id) return;

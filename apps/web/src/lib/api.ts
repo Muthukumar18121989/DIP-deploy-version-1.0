@@ -8,6 +8,7 @@ import type {
   Experiment,
   ExperimentDetail,
   MonitoringSnapshot,
+  PipelineEventsReplay,
   SimulateDeltas,
   SimulateResult,
   Strategy,
@@ -126,6 +127,9 @@ export const api = {
     }),
 
   pipelineStreamUrl: (id: string) => `${BASE}/use-cases/${id}/pipeline/stream`,
+
+  getPipelineEvents: (id: string, experimentId?: string) =>
+    request<PipelineEventsReplay>(withExperiment(`/use-cases/${id}/pipeline/events`, experimentId)),
 
   listExperiments: (useCaseId: string) => request<Experiment[]>(`/use-cases/${useCaseId}/experiments`),
 

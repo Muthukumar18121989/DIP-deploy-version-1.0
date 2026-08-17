@@ -18,16 +18,30 @@ const EMPTY_RUN: PipelineRunState = { events: {}, selectedStage: null, running: 
 // every page reads to render progress; this map is what keeps the run alive.
 const eventSources: Record<string, EventSource> = {};
 
+// Pending re-checks for a run this tab is no longer streaming (see restoreRun).
+// Kept out of state for the same reason as the EventSources above.
+const restorePolls: Record<string, ReturnType<typeof setTimeout>> = {};
+const restoreStalls: Record<string, number> = {};
+const RESTORE_POLL_MS = 2500;
+// A run whose event count hasn't moved for this many polls is treated as
+// abandoned rather than slow. The pipeline executes inside its SSE response,
+// so whichever tab started a run also ends it by disconnecting — an
+// experiment can therefore sit at "running" forever, and polling one of those
+// would never terminate on its own.
+const RESTORE_STALL_LIMIT = 8;
+
 interface PipelineStore {
   runs: Record<string, PipelineRunState>;
   selectStage: (useCaseId: string, stage: string) => void;
   runPipeline: (useCaseId: string, onComplete?: () => void) => void;
+  restoreRun: (useCaseId: string) => Promise<void>;
+  stopRestorePolling: (useCaseId: string) => void;
   isConnected: (useCaseId: string) => boolean;
 }
 
 export const usePipelineStore = create<PipelineStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       runs: {},
 
       selectStage: (useCaseId, stage) =>
@@ -40,6 +54,10 @@ export const usePipelineStore = create<PipelineStore>()(
 
       runPipeline: (useCaseId, onComplete) => {
         eventSources[useCaseId]?.close();
+        // A live stream supersedes any pending restore of an older run.
+        clearTimeout(restorePolls[useCaseId]);
+        delete restorePolls[useCaseId];
+        delete restoreStalls[useCaseId];
 
         set((state) => ({
           runs: { ...state.runs, [useCaseId]: { ...EMPTY_RUN, running: true } },
@@ -94,6 +112,67 @@ export const usePipelineStore = create<PipelineStore>()(
             runs: { ...state.runs, [useCaseId]: { ...(state.runs[useCaseId] ?? EMPTY_RUN), running: false } },
           }));
         };
+      },
+
+      // Run state above lives in sessionStorage, which is scoped to one tab:
+      // a fresh tab, another browser, or another device has none of it, and
+      // the pipeline reads as never-run even though the decisions and
+      // dashboard it produced are sitting right there. Pull the most recent
+      // run's stages back from the server to close that gap.
+      restoreRun: async (useCaseId) => {
+        // A run streaming into this tab is always the freshest truth.
+        if (get().runs[useCaseId]?.running) return;
+
+        let replay;
+        try {
+          replay = await api.getPipelineEvents(useCaseId);
+        } catch {
+          // 404 just means this use case has never run the pipeline — the
+          // empty view is already the correct thing to show.
+          return;
+        }
+
+        const known = Object.keys(get().runs[useCaseId]?.events ?? {}).length;
+        restoreStalls[useCaseId] = replay.events.length > known ? 0 : (restoreStalls[useCaseId] ?? 0) + 1;
+
+        if (replay.events.length) {
+          set((state) => {
+            const current = state.runs[useCaseId];
+            if (current?.running) return state;
+            // Only overwrite when the server knows more than this tab does,
+            // so re-checks during a poll stay idempotent.
+            if (Object.keys(current?.events ?? {}).length >= replay.events.length) return state;
+            return {
+              runs: {
+                ...state.runs,
+                [useCaseId]: {
+                  events: Object.fromEntries(replay.events.map((event) => [event.stage, event])),
+                  selectedStage: current?.selectedStage ?? replay.events[replay.events.length - 1].stage,
+                  running: false,
+                  completedAt: current?.completedAt ?? null,
+                },
+              },
+            };
+          });
+        }
+
+        // A run still streaming into another tab keeps producing stages that
+        // this one can only see by asking again. Stop once it stops advancing,
+        // so an abandoned run doesn't leave a timer running forever.
+        clearTimeout(restorePolls[useCaseId]);
+        delete restorePolls[useCaseId];
+        const stalled = restoreStalls[useCaseId] >= RESTORE_STALL_LIMIT;
+        if (replay.status === "running" && !stalled && !get().runs[useCaseId]?.running) {
+          restorePolls[useCaseId] = setTimeout(() => {
+            void get().restoreRun(useCaseId);
+          }, RESTORE_POLL_MS);
+        }
+      },
+
+      stopRestorePolling: (useCaseId) => {
+        clearTimeout(restorePolls[useCaseId]);
+        delete restorePolls[useCaseId];
+        delete restoreStalls[useCaseId];
       },
 
       isConnected: (useCaseId) => !!eventSources[useCaseId],

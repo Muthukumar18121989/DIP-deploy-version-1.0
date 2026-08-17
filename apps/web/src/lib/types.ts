@@ -130,6 +130,13 @@ export interface DashboardData {
   forecast: Forecast;
 }
 
+/** Replay of a past run, used to restore the pipeline view after a reload. */
+export interface PipelineEventsReplay {
+  experiment_id: string;
+  status: "running" | "complete" | "error";
+  events: PipelineEvent[];
+}
+
 export interface PipelineEvent {
   stage: string;
   label?: string;

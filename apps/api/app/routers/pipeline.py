@@ -66,6 +66,13 @@ def stream_pipeline(
         # generator opens its own short-lived session for the status/Strategy
         # writes it needs to make as stages complete.
         session = SessionLocal()
+        # Every completed stage is also written to the experiment's artifact
+        # store, so the pipeline view can rehydrate its stage-by-stage
+        # narration later. Without this the run's events live only in the
+        # browser tab that started it, and a reload — or a new tab, or another
+        # device — shows a use case with decisions and a dashboard but a
+        # pipeline that looks like it never ran.
+        completed_events: list[dict] = []
         try:
             for event in run_pipeline(experiment_id, use_case_id, use_case_dict):
                 if event["stage"] == "decision_generation" and event["status"] == "complete":
@@ -95,6 +102,13 @@ def stream_pipeline(
                         )
                     session.commit()
 
+                if event["status"] == "complete":
+                    # Saved per stage rather than once at the end, so a run
+                    # that errors partway still rehydrates the stages that did
+                    # finish instead of losing all of them.
+                    completed_events.append(event)
+                    store.save_json(experiment_id, "events", completed_events)
+
                 yield f"data: {json.dumps(event, default=str)}\n\n"
 
             experiment_row = session.get(Experiment, experiment_id)
@@ -117,6 +131,40 @@ def stream_pipeline(
             session.close()
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.get("/pipeline/events")
+def get_pipeline_events(
+    use_case_id: str,
+    experiment_id: str | None = None,
+    db: Session = Depends(get_db),
+    use_case: UseCase = Depends(get_use_case_or_404),
+):
+    """The stage-by-stage narration of the most recent run, so the pipeline
+    view can be restored after a reload instead of appearing to have never run.
+
+    Unlike the other read endpoints here this resolves to the latest experiment
+    of *any* status, not the latest complete one. A tab that reloaded midway
+    through a run needs the events of the run it was actually watching; handing
+    it the previous run's would silently show the wrong version. `status` lets
+    the client tell a finished run from one still in progress.
+    """
+    if experiment_id:
+        experiment = db.get(Experiment, experiment_id)
+    else:
+        experiment = db.execute(
+            select(Experiment)
+            .where(Experiment.use_case_id == use_case_id)
+            .order_by(Experiment.version_number.desc())
+        ).scalars().first()
+    if experiment is None:
+        raise HTTPException(status_code=404, detail="Pipeline hasn't been run for this use case yet.")
+
+    return {
+        "experiment_id": experiment.id,
+        "status": experiment.status,
+        "events": store.load_json(experiment.id, "events") or [],
+    }
 
 
 @router.get("/decisions")
