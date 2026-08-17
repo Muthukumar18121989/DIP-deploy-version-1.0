@@ -18,8 +18,13 @@ CORS_ORIGINS = [
     "http://127.0.0.1:5173",
 ] + [origin.strip() for origin in _env_origins.split(",") if origin.strip()]
 
-# Seeded once at startup if no admin account exists yet (see main.py). Change
-# these via env vars for any deployment beyond local/demo use.
+# Seeded once at startup if no admin account exists yet (see main.py).
+#
+# ADMIN_PASSWORD deliberately has no fallback value. A literal default here
+# would be a working admin credential published in this repo, so anyone who
+# found a deployment's URL could sign in as admin and read every user's data
+# through the Admin Dashboard. When it is unset, main.py generates a random
+# password at first startup and prints it once — see _seed_default_admin.
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@decisionos.local")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin12345")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or None
 ADMIN_NAME = os.environ.get("ADMIN_NAME", "Admin")

@@ -121,8 +121,9 @@ persist across deploys without attaching a real paid volume.
    `sync: false` in `render.yaml`; you can leave it blank for now and fill it
    in later from the service's **Environment** tab.
 4. Also set `ADMIN_EMAIL` / `ADMIN_PASSWORD` (also `sync: false`) to your own
-   values — the code's defaults (`admin@decisionos.local` / `admin12345`)
-   are public in this repo and only seed if unset.
+   values. If you leave `ADMIN_PASSWORD` unset the admin account is still
+   created, with a random password printed once to the service's startup
+   log — setting it explicitly is simply easier than reading it back out.
 
 ### Frontend — Vercel
 
@@ -154,9 +155,10 @@ pipeline artifacts if you need that). Requires the
 (`gcloud auth login`) against your project (`gcloud config set project
 YOUR_PROJECT_ID`).
 
-**Change the seeded admin credentials before deploying anywhere real** — the
-defaults in `app/config.py` (`admin@decisionos.local` / `admin12345`) are
-public in this repo. Set `ADMIN_EMAIL` / `ADMIN_PASSWORD` below to your own.
+**Set `ADMIN_EMAIL` / `ADMIN_PASSWORD` below** to choose the seeded admin
+credential. There is no default password: leaving `ADMIN_PASSWORD` unset
+generates a random one and prints it once to the startup log, so a deployment
+never ships with a credential that is public in this repo.
 
 ### Backend
 

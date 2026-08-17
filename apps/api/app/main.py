@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
@@ -30,7 +32,12 @@ _ensure_owner_user_id_column()
 def _seed_default_admin() -> None:
     """Idempotent: only creates an admin if none exists at all, so this is
     safe to run on every startup and never overwrites an admin's changed
-    password or duplicates accounts."""
+    password or duplicates accounts.
+
+    When ADMIN_PASSWORD is unset the password is randomly generated and
+    printed once, rather than falling back to a literal default. A default
+    would be public in this repo, which on any reachable deployment means
+    anyone can sign in as admin."""
     db = SessionLocal()
     try:
         has_admin = db.execute(select(User).where(User.role == "admin")).scalars().first()
@@ -38,7 +45,13 @@ def _seed_default_admin() -> None:
             return
         if get_user_by_email(db, ADMIN_EMAIL) is not None:
             return
-        password_hash, salt = hash_password(ADMIN_PASSWORD)
+
+        password = ADMIN_PASSWORD
+        was_generated = password is None
+        if was_generated:
+            password = secrets.token_urlsafe(24)
+
+        password_hash, salt = hash_password(password)
         db.add(
             User(
                 email=ADMIN_EMAIL.lower().strip(),
@@ -49,6 +62,23 @@ def _seed_default_admin() -> None:
             )
         )
         db.commit()
+
+        if was_generated:
+            # Only reachable on the one startup that creates the account, and
+            # the password is not recoverable afterwards (it is stored hashed).
+            print(
+                "\n" + "=" * 72,
+                "ADMIN ACCOUNT CREATED — this password is shown once and not stored.",
+                "",
+                f"  email:    {ADMIN_EMAIL}",
+                f"  password: {password}",
+                "",
+                "Generated because ADMIN_PASSWORD was unset. Set ADMIN_EMAIL and",
+                "ADMIN_PASSWORD to choose your own, or sign in and change it.",
+                "=" * 72 + "\n",
+                sep="\n",
+                flush=True,
+            )
     finally:
         db.close()
 
