@@ -99,6 +99,14 @@ npm run dev
 
 App at `http://localhost:5173`, proxying `/api/*` to the backend.
 
+## Deploying to a private GCP VM
+
+If you want the platform reachable only by people who can authenticate to
+your GCP project — and you want its database and trained models to survive a
+redeploy — see **[DEPLOY-GCP-VM.md](DEPLOY-GCP-VM.md)**. That topology suits
+this app better than the serverless options below, because the backend keeps
+SQLite and every run's artifacts on local disk.
+
 ## Deploying to a public URL
 
 The backend and frontend deploy to separate hosts. **Storage caveat first:**
