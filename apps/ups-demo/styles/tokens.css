@@ -1,0 +1,191 @@
+/* ==========================================================================
+   Digital Analyzer — Design Tokens
+   Single source of truth for colour, type, spacing, radius, elevation and
+   component dimensions. Screens must consume tokens, never raw values.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand ----------------------------------------------------------- */
+  --color-brand-gold: #ffc400;
+  --color-brand-gold-hover: #edb500;
+  --color-brand-gold-active: #d9a600;
+  --color-brand-brown: #351c15;
+  --color-brand-shield: #ffb500;
+
+  /* ---- Primary (teal, used for the active segment / selected states) ---- */
+  --color-primary: #00857d;
+  --color-primary-hover: #00736c;
+  --color-primary-active: #00615b;
+  --color-primary-subtle: #e5f3f2;
+  --color-on-primary: #ffffff;
+  /*
+   * Teal as *text* on a light surface. The fill tone only reaches 4.1:1 on the
+   * grey page background, so type uses the palette's own darker step.
+   */
+  --color-primary-text: var(--color-primary-hover);
+
+  /* ---- Neutrals / surfaces --------------------------------------------- */
+  --color-bg: #f4f4f4;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #fafafa;
+  --color-surface-muted: #f0f0f0;
+  --color-surface-muted-strong: #e3e3e3;
+  --color-surface-hover: #f2f7fb;
+  --color-surface-inverse: #3b3b3b;
+
+  /* ---- Borders ---------------------------------------------------------- */
+  --color-border: #dcdcdc;
+  --color-border-strong: #bdbdbd;
+  --color-border-subtle: #ebebeb;
+
+  /* ---- Text ------------------------------------------------------------- */
+  --color-text-primary: #2b2b2b;
+  --color-text-secondary: #565656;
+  --color-text-muted: #6b6b6b;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #0a61a8;
+  --color-text-link-hover: #084b82;
+
+  /* ---- Semantic feedback ------------------------------------------------ */
+  --color-info: #0a61a8;
+  --color-info-subtle: #e3effa;
+  --color-success: #1c7c3c;
+  --color-success-subtle: #e5f4e9;
+  --color-warning: #8a5a00;
+  --color-warning-subtle: #fdf2dc;
+  --color-error: #b3261e;
+  --color-error-subtle: #fce9e8;
+  --color-neutral-badge: #4a4a4a;
+  --color-neutral-badge-subtle: #eeeeee;
+
+  /* ---- Form fields ------------------------------------------------------ */
+  --color-field-bg: #ffffff;
+  --color-field-bg-subtle: #eef2f6;
+  --color-field-border: #a9bccd;
+  --color-field-border-hover: #7d97ae;
+  --color-field-border-filled: #1f3348;
+  --color-field-label: #806500;
+  --color-field-placeholder: #6b7a89;
+  --color-field-text: #1f3348;
+
+  /* ---- Disabled --------------------------------------------------------- */
+  --color-disabled-bg: #f0f0f0;
+  --color-disabled-border: var(--color-border);
+  --color-disabled-text: #757575;
+
+  /* ---- Focus ------------------------------------------------------------ */
+  --color-focus-ring: #0a61a8;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ---- Typography ------------------------------------------------------- */
+  --font-family-base: "Roboto", "Segoe UI", Arial, "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --font-family-numeric: "Roboto", "Segoe UI", system-ui, sans-serif;
+
+  --font-size-3xs: 0.625rem;   /* 10px — fine print under a control         */
+  --font-size-2xs: 0.6875rem;  /* 11px — badge text                          */
+  --font-size-xs: 0.75rem;     /* 12px — metadata, helper text               */
+  --font-size-sm: 0.8125rem;   /* 13px — table body, labels, controls        */
+  --font-size-md: 0.875rem;    /* 14px — body                                */
+  --font-size-lg: 1rem;        /* 16px — section title                       */
+  --font-size-xl: 1.125rem;    /* 18px — page / product title                */
+  --font-size-2xl: 1.375rem;   /* 22px — page heading                        */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
+  --line-height-normal: 1.5;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wider: 0.07em;
+
+  /* ---- Spacing scale (4px base) ----------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem;  /* 4  */
+  --space-2: 0.5rem;   /* 8  */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.25rem;  /* 20 */
+  --space-6: 1.5rem;   /* 24 */
+  --space-7: 2rem;     /* 32 */
+  --space-8: 2.5rem;   /* 40 */
+
+  /* ---- Radius ------------------------------------------------------------ */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /*
+   * Radius by role, so the same kind of thing is rounded the same amount
+   * everywhere: outermost surfaces, containers nested inside them, and the
+   * controls that sit on top. Pills opt out explicitly.
+   */
+  --radius-surface: var(--radius-lg);
+  --radius-container: var(--radius-sm);
+  --radius-control: var(--radius-sm);
+
+  /* ---- Elevation (restrained) -------------------------------------------- */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  /* ---- Component dimensions ---------------------------------------------- */
+  --app-header-height: 86px;
+  --control-height-sm: 28px;
+  --control-height-md: 34px;
+  --control-height-lg: 38px;
+  --icon-button-size: 36px;
+  --avatar-size: 38px;
+
+  --field-height: 42px;
+  --field-padding-x: var(--space-3);
+  --form-card-width: 700px;
+
+  /*
+   * The help affordance sits in a gutter every field reserves, whether or not
+   * it has one, so inputs share a right edge and the icons share an axis.
+   */
+  --field-help-size: 20px;
+
+  /* WCAG 2.2 target size: icon-only controls extend to this, visual size aside. */
+  --tap-target-min: 24px;
+
+  --table-header-height: 42px;
+  --table-row-height: 36px;
+  --table-cell-padding-x: var(--space-3);
+  --table-min-width: 1180px;
+  --table-min-height: 180px;
+
+  --page-max-width: 1600px;
+  --page-gutter: var(--space-6);
+
+  /* ---- Motion ------------------------------------------------------------ */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}
+
+/*
+ * The bid table inside a scenario uses a warmer header than the packet list.
+ * Point this at --color-surface-inverse to make every table header identical.
+ */
+:root {
+  --color-surface-inverse-warm: #5a4b45;
+}

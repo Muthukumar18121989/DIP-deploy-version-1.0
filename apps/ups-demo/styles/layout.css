@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Layout — page shell for the Analyzer Packets screen
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--page-max-width);
+  min-height: 0;
+  margin: 0 auto;
+  padding: var(--page-gutter);
+  overflow-y: auto;
+}
+
+.page__panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive behaviour
+   The desktop composition is the reference. Narrower viewports only reflow
+   the toolbar; the table keeps its structure and scrolls horizontally.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  :root {
+    --page-gutter: var(--space-4);
+    --app-header-height: 72px;
+  }
+
+  .panel__toolbar-actions {
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1024px) {
+  .summary-panel__fields--audit {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  /* Five operational metrics across leaves each too narrow to hold a figure
+     and its change on one line at this width. */
+  .impact__metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --page-gutter: var(--space-3);
+  }
+
+  /*
+   * Two 42px fields side by side leave about 150px each at this width, which
+   * clips their labels. The desktop composition is untouched; below 720px the
+   * same fields simply stack in the order they already appear.
+   */
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Every section stacks to one column; nothing is wide enough here to carry
+     a name and a date side by side. */
+  .summary-panel__fields--thirds,
+  .summary-panel__fields--audit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The two outcomes stack, and the metrics pair up rather than sitting five
+     across at 43px each. The bar label narrows to leave the bar something to
+     draw in. */
+  .impact__outcomes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .impact__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .impact__bar-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  /* No room for a side list at this width, so it becomes a header above the
+     plan rather than a column beside it. */
+  .plan-browser {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plan-browser__list {
+    padding-right: 0;
+    padding-bottom: var(--space-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .form-card {
+    padding: var(--space-5);
+  }
+
+  .summary-panel__body {
+    padding-left: var(--space-5);
+  }
+
+  /* Stacked, the headline is several lines tall; the disclosure belongs on
+     the first of them rather than floating against the middle. */
+  .summary-panel__header {
+    align-items: flex-start;
+  }
+
+  .app-header {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .app-header__logo {
+    width: 40px;
+    height: 46px;
+  }
+
+  .app-header__title {
+    font-size: var(--font-size-lg);
+  }
+
+  .panel__toolbar {
+    padding: var(--space-4);
+  }
+
+  .panel__toolbar-group {
+    flex: 1 1 100%;
+  }
+
+  .search-field {
+    max-width: none;
+  }
+
+  /* Reclaim padding so the full placeholder still fits on narrow screens. */
+  .search-field__input {
+    padding-left: var(--space-7);
+  }
+
+  .search-field__icon {
+    left: var(--space-2);
+  }
+
+  .panel__toolbar-actions {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .panel__toolbar-actions .button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .segmented {
+    width: 100%;
+  }
+
+  .segmented__option {
+    flex: 1 1 0;
+    padding: 0 var(--space-3);
+  }
+}
+
+/* View slot beneath the persistent header — screens swap in here. */
+.app-shell__view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-shell__header {
+  flex: 0 0 auto;
+}
