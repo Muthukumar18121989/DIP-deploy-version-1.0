@@ -3,6 +3,7 @@ import type { UseCaseStatus } from "./types";
 
 export const USE_CASE_STATUS_LABELS: Record<UseCaseStatus, { label: string; variant: BadgeProps["variant"] }> = {
   created: { label: "Draft", variant: "default" },
+  needs_mapping: { label: "Map Columns", variant: "warning" },
   data_ready: { label: "Data Connected", variant: "accent" },
   pipeline_running: { label: "Pipeline Running", variant: "warning" },
   pipeline_complete: { label: "Decision Generated", variant: "success" },

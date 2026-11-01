@@ -5,14 +5,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import get_strategy_or_404, get_use_case_or_404
-from app.models import Experiment, Strategy, UseCase
+from app.auth import get_current_user
+from app.deps import accessible_use_case_ids, get_strategy_or_404, get_use_case_or_404
+from app.models import Experiment, Strategy, UseCase, User
 from app.pipeline import store
 from app.pipeline.decisions import apply_raw_deltas, generate_decisions
 from app.pipeline.features import encode_features, engineer_features
 from app.pipeline.forecasting import forecast_revenue
 from app.pipeline.orchestrator import build_dashboard
 from app.pipeline.profiling import profile_dataframe
+from app.pipeline.schema import available_roles, real_columns_frame
 from app.pipeline.training import train_and_compare
 from app.schemas import LockInRequest, StrategyOut, StrategyUpdate
 
@@ -33,11 +35,15 @@ def list_strategies(
 
 
 @router.get("/api/strategies/compare", response_model=list[StrategyOut])
-def compare_strategies(ids: str, db: Session = Depends(get_db)):
+def compare_strategies(ids: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     strategy_ids = [s for s in ids.split(",") if s]
     if not (2 <= len(strategy_ids) <= 4):
         raise HTTPException(status_code=400, detail="Compare between 2 and 4 strategies.")
-    strategies = db.execute(select(Strategy).where(Strategy.id.in_(strategy_ids))).scalars().all()
+    query = select(Strategy).where(Strategy.id.in_(strategy_ids))
+    allowed = accessible_use_case_ids(db, current_user)
+    if allowed is not None:
+        query = query.where(Strategy.use_case_id.in_(allowed))
+    strategies = db.execute(query).scalars().all()
     by_id = {s.id: s for s in strategies}
     missing = [sid for sid in strategy_ids if sid not in by_id]
     if missing:
@@ -141,14 +147,18 @@ def lock_in_strategy(
     db.add(experiment)
     db.flush()
 
-    adjusted_df = apply_raw_deltas(raw_df, deltas)
-    profiling = profile_dataframe(adjusted_df)
+    data_meta = store.load_json(strategy.use_case_id, "data_meta")
+    available = available_roles(data_meta)
+    adjusted_df = apply_raw_deltas(raw_df, deltas, available=available)
+    profiling = profile_dataframe(real_columns_frame(adjusted_df, data_meta))
     features = engineer_features(adjusted_df)
     encoded, feature_columns = encode_features(features)
     training_result = train_and_compare(encoded, feature_columns)
-    decisions = generate_decisions(training_result["best_model"], encoded, feature_columns, training_result["cv_r2_mean"])
+    decisions = generate_decisions(
+        training_result["best_model"], encoded, feature_columns, training_result["cv_r2_mean"], available
+    )
     forecast = forecast_revenue(adjusted_df)
-    dashboard = build_dashboard(adjusted_df, features, profiling, decisions, forecast)
+    dashboard = build_dashboard(adjusted_df, features, profiling, decisions, forecast, available)
 
     store.save_json(experiment.id, "profiling", profiling)
     store.save_encoded(experiment.id, encoded, feature_columns)
@@ -193,12 +203,35 @@ def lock_in_strategy(
         if decision["id"] == strategy.decision_key:
             locked_in_strategy = new_strategy
 
-    db.commit()
-
     if locked_in_strategy is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Lock-in completed but the original decision lever no longer appears in the regenerated set.",
+        # Decisions are sized from the data, so after locking in a scenario
+        # the same option may no longer be generated (e.g. the lever is now
+        # already at its historical high). Keep the user's decision anyway,
+        # as a new version attached to the re-run experiment.
+        locked_in_strategy = Strategy(
+            use_case_id=strategy.use_case_id,
+            experiment_id=experiment.id,
+            parent_strategy_id=strategy.id,
+            version_number=strategy.version_number + 1,
+            decision_key=strategy.decision_key,
+            title=strategy.title,
+            lever=strategy.lever,
+            confidence_pct=strategy.confidence_pct,
+            predicted_revenue_delta=strategy.predicted_revenue_delta,
+            predicted_revenue_delta_pct=strategy.predicted_revenue_delta_pct,
+            risk=strategy.risk,
+            estimated_cost=strategy.estimated_cost,
+            estimated_roi=strategy.estimated_roi,
+            implementation_difficulty=strategy.implementation_difficulty,
+            timeline=strategy.timeline,
+            pros=list(strategy.pros),
+            cons=list(strategy.cons),
+            methodology=strategy.methodology,
+            lifecycle_status="locked_in",
+            sandbox_deltas=deltas,
         )
+        db.add(locked_in_strategy)
+
+    db.commit()
     db.refresh(locked_in_strategy)
     return locked_in_strategy

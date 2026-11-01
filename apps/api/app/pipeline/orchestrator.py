@@ -21,6 +21,11 @@ from app.pipeline.decisions import generate_decisions
 from app.pipeline.features import encode_features, engineer_features
 from app.pipeline.forecasting import forecast_revenue
 from app.pipeline.profiling import profile_dataframe
+from app.pipeline.schema import available_roles, real_columns_frame
+
+# Below this many model-ready rows (region x category x month, after the
+# first 3 months are used up by lag features) cross-validation is noise.
+MIN_TRAINING_ROWS = 15
 from app.pipeline.training import MODEL_REGISTRY, train_and_compare
 
 
@@ -54,6 +59,8 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
     raw_df = store.load_raw_df(use_case_id)
     if raw_df is None:
         raise ValueError("No data attached to this use case yet.")
+    data_meta = store.load_json(use_case_id, "data_meta")
+    available = available_roles(data_meta)
 
     yield _event(
         "reading_data", "Reading Data", "running",
@@ -75,7 +82,7 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
         "Bad or missing data quietly wrecks model accuracy if it isn't caught first.",
         "Running statistical checks column by column.",
     )
-    profiling = profile_dataframe(raw_df)
+    profiling = profile_dataframe(real_columns_frame(raw_df, data_meta))
     store.save_json(experiment_id, "profiling", profiling)
     yield _event(
         "cleaning_data", "Cleaning Data", "complete",
@@ -93,6 +100,11 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
     )
     features = engineer_features(raw_df)
     encoded, feature_columns = encode_features(features)
+    if len(encoded) < MIN_TRAINING_ROWS:
+        raise ValueError(
+            f"Only {len(encoded)} monthly rows are left after building trend features; at least "
+            f"{MIN_TRAINING_ROWS} are needed. Add more months of history, or map fewer dimensions."
+        )
     store.save_encoded(experiment_id, encoded, feature_columns)
     yield _event(
         "feature_selection", "Feature Engineering", "complete",
@@ -174,10 +186,10 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
         "decision_generation", "Decision Generation", "running",
         "Testing what happens to predicted revenue under a few realistic business changes.",
         "A model is only useful if it's turned into concrete options a business can choose between.",
-        "Simulating price, inventory, marketing, and discount scenarios through the trained model.",
+        "Sizing each lever in your data from its own history and simulating it through the trained model.",
     )
     decisions = generate_decisions(
-        training_result["best_model"], encoded, feature_columns, training_result["cv_r2_mean"]
+        training_result["best_model"], encoded, feature_columns, training_result["cv_r2_mean"], available
     )
     store.save_json(experiment_id, "decisions", decisions)
     top_decision = decisions[0] if decisions else None
@@ -202,7 +214,10 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
             f"with {top_decision['confidence_pct']:.0f}% model confidence."
         )
     else:
-        headline = "No decision options could be generated."
+        headline = (
+            "No actions to recommend: the data has no levers (price, marketing, discount, inventory) "
+            "that vary over time. The forecast and drivers below still apply."
+        )
     store.save_json(experiment_id, "recommendation_headline", headline)
     yield _event(
         "business_simulation", "Business Simulation", "complete",
@@ -248,7 +263,7 @@ def run_pipeline(experiment_id: str, use_case_id: str, use_case: dict) -> Iterat
         "All this analysis is only useful once it's visible in one place.",
         "Aggregating regional, category, and trend views for the dashboard.",
     )
-    dashboard = build_dashboard(raw_df, features, profiling, decisions, forecast)
+    dashboard = build_dashboard(raw_df, features, profiling, decisions, forecast, available)
     store.save_json(experiment_id, "dashboard", dashboard)
     yield _event(
         "final_dashboard", "Dashboard Generation", "complete",
@@ -269,7 +284,14 @@ def _strongest_correlations(correlation: dict, target: str = "revenue", top_n: i
     return [f"{col} ({val:+.2f})" for col, val in ranked[:top_n]]
 
 
-def build_dashboard(raw_df: pd.DataFrame, features: pd.DataFrame, profiling: dict, decisions: list[dict], forecast: dict) -> dict:
+def build_dashboard(
+    raw_df: pd.DataFrame,
+    features: pd.DataFrame,
+    profiling: dict,
+    decisions: list[dict],
+    forecast: dict,
+    available: set[str] | None = None,
+) -> dict:
     by_region = (
         raw_df.groupby("region")["revenue"].sum().sort_values(ascending=False).round(2).to_dict()
     )
@@ -285,9 +307,14 @@ def build_dashboard(raw_df: pd.DataFrame, features: pd.DataFrame, profiling: dic
     total_revenue = float(raw_df["revenue"].sum())
     total_orders = int(len(raw_df))
     avg_order_value = round(total_revenue / total_orders, 2) if total_orders else 0
-    stockout_rate = round(float(raw_df["stockout_flag"].mean()) * 100, 2)
-    churn_rate = round(float(raw_df["churn_flag"].mean()) * 100, 2)
-    avg_satisfaction = round(float(raw_df["customer_satisfaction"].mean()), 2)
+    available = available_roles(None) if available is None else available
+    # KPIs the data doesn't contain are reported as null, not as a
+    # placeholder 0 that would read like a real (and excellent) number.
+    stockout_rate = round(float(raw_df["stockout_flag"].mean()) * 100, 2) if "stockout_flag" in available else None
+    churn_rate = round(float(raw_df["churn_flag"].mean()) * 100, 2) if "churn_flag" in available else None
+    avg_satisfaction = (
+        round(float(raw_df["customer_satisfaction"].mean()), 2) if "customer_satisfaction" in available else None
+    )
 
     segment_mix = raw_df.groupby("customer_segment")["revenue"].sum().round(2).to_dict()
     channel_mix = raw_df.groupby("channel")["revenue"].sum().round(2).to_dict()

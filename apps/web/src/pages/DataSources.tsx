@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ConnectorConfigDialog } from "@/components/connectors/ConnectorConfigDialog";
+import { ColumnMappingCard } from "@/components/data/ColumnMappingCard";
 import { SOURCE_CONNECTORS } from "@/lib/connectors";
 import { api } from "@/lib/api";
 import { useUseCase } from "@/lib/hooks";
@@ -28,7 +29,7 @@ export default function DataSources() {
   const { data: quality } = useQuery({
     queryKey: ["data-quality", id],
     queryFn: () => api.getDataQuality(id!),
-    enabled: !!id && useCase?.status !== "created",
+    enabled: !!id && useCase?.status !== "created" && useCase?.status !== "needs_mapping",
     retry: false,
   });
 
@@ -45,10 +46,11 @@ export default function DataSources() {
   const uploadMutation = useMutation({
     mutationFn: (file: File) => api.uploadData(id!, file),
     onSuccess: (res) => {
-      if (res.schema_match) toast.success(res.message);
-      else toast.warning(res.message);
+      if (res.needs_mapping) toast.info(res.message);
+      else toast.success(res.message);
       queryClient.invalidateQueries({ queryKey: ["use-case", id] });
       queryClient.invalidateQueries({ queryKey: ["data-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["column-mapping", id] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -92,8 +94,8 @@ export default function DataSources() {
             <CardContent>
               <CardTitle>Upload CSV</CardTitle>
               <CardDescription>
-                Real upload and profiling. The full AI pipeline requires Sales-shaped columns —
-                use the synthetic generator to see the complete flow.
+                Upload your own sales export. You'll match its columns (date, the KPI to explain,
+                region, price, marketing and so on) on the next step. At least 6 months of history.
               </CardDescription>
               <input
                 ref={fileInputRef}
@@ -117,7 +119,9 @@ export default function DataSources() {
           </Card>
         </div>
 
-        {quality && (
+        {useCase?.status === "needs_mapping" && <ColumnMappingCard useCaseId={id} />}
+
+        {quality && useCase?.status !== "needs_mapping" && (
           <Card className="mb-8">
             <CardHeader>
               <div>

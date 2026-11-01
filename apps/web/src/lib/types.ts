@@ -1,5 +1,6 @@
 export type UseCaseStatus =
   | "created"
+  | "needs_mapping"
   | "data_ready"
   | "pipeline_running"
   | "pipeline_complete"
@@ -96,6 +97,43 @@ export interface Decision {
   pros: string[];
   cons: string[];
   methodology: string;
+  deltas?: Record<string, number>;
+  regions?: string[] | null;
+}
+
+export interface MappingRole {
+  key: string;
+  label: string;
+  group: "time" | "kpi" | "dimension" | "lever" | "driver";
+  kind: "date" | "number" | "category" | "flag" | "id";
+  help: string;
+  required: boolean;
+}
+
+export interface UploadResult {
+  row_count: number;
+  columns: string[];
+  schema_match: boolean;
+  needs_mapping: boolean;
+  suggested_mapping?: Record<string, string>;
+  roles?: MappingRole[];
+  message: string;
+}
+
+export interface MappingScreen {
+  columns: string[];
+  samples: Record<string, string[]>;
+  row_count: number;
+  roles: MappingRole[];
+  suggested_mapping: Record<string, string>;
+  current_mapping: Record<string, string> | null;
+}
+
+export interface MappingResult {
+  row_count: number;
+  month_count: number;
+  available: string[];
+  message: string;
 }
 
 export interface ForecastPoint {
@@ -115,9 +153,10 @@ export interface DashboardData {
     total_revenue: number;
     total_orders: number;
     avg_order_value: number;
-    stockout_rate_pct: number;
-    churn_rate_pct: number;
-    avg_satisfaction: number;
+    // null when the dataset has no such column (see column mapping)
+    stockout_rate_pct: number | null;
+    churn_rate_pct: number | null;
+    avg_satisfaction: number | null;
     data_quality_score: number;
   };
   revenue_by_region: Record<string, number>;

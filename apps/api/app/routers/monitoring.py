@@ -20,7 +20,11 @@ DRIFT_THRESHOLD_PCT = 15.0
 
 
 @router.get("/api/strategies/{strategy_id}/monitoring", response_model=list[MonitoringOut])
-def list_monitoring(strategy_id: str, db: Session = Depends(get_db)):
+def list_monitoring(
+    strategy_id: str,
+    db: Session = Depends(get_db),
+    strategy: Strategy = Depends(get_strategy_or_404),
+):
     return db.execute(
         select(MonitoringSnapshot)
         .where(MonitoringSnapshot.strategy_id == strategy_id)

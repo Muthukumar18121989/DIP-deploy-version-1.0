@@ -7,6 +7,9 @@ import type {
   Decision,
   Experiment,
   ExperimentDetail,
+  MappingResult,
+  MappingScreen,
+  UploadResult,
   MonitoringSnapshot,
   PipelineEventsReplay,
   SimulateDeltas,
@@ -22,7 +25,7 @@ import type {
   WidgetLayoutItem,
   WidgetLayoutRow,
 } from "./types";
-import { getToken } from "./authToken";
+import { getToken, setToken } from "./authToken";
 
 // In local dev, "/api" is proxied to the backend by vite.config.ts. In a
 // split deployment (frontend and backend on different hosts), set
@@ -37,6 +40,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
     ...init,
   });
+  if (res.status === 401 && token && !path.startsWith("/auth/")) {
+    // The session expired or was revoked: drop it and send the user to sign
+    // in again, rather than leaving every page showing "Not authenticated".
+    setToken(null);
+    localStorage.removeItem("dip-auth-store");
+    const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.assign(`/login?redirect=${redirect}`);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail ?? `Request failed: ${res.status}`);
@@ -95,11 +106,16 @@ export const api = {
   uploadData: (id: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
-    return request<{ row_count: number; columns: string[]; schema_match: boolean; message: string }>(
-      `/use-cases/${id}/data/upload`,
-      { method: "POST", body: form }
-    );
+    return request<UploadResult>(`/use-cases/${id}/data/upload`, { method: "POST", body: form });
   },
+
+  getMapping: (id: string) => request<MappingScreen>(`/use-cases/${id}/data/mapping`),
+
+  saveMapping: (id: string, mapping: Record<string, string | null>) =>
+    request<MappingResult>(`/use-cases/${id}/data/mapping`, {
+      method: "POST",
+      body: JSON.stringify({ mapping }),
+    }),
 
   getDataQuality: (id: string) => request<DataProfile>(`/use-cases/${id}/data/quality`),
 
@@ -126,7 +142,10 @@ export const api = {
       body: JSON.stringify({ connector_key: connectorKey, kind, config }),
     }),
 
-  pipelineStreamUrl: (id: string) => `${BASE}/use-cases/${id}/pipeline/stream`,
+  // EventSource can't send an Authorization header, so the stream is the one
+  // request that carries the session token in the URL.
+  pipelineStreamUrl: (id: string) =>
+    `${BASE}/use-cases/${id}/pipeline/stream?token=${encodeURIComponent(getToken() ?? "")}`,
 
   getPipelineEvents: (id: string, experimentId?: string) =>
     request<PipelineEventsReplay>(withExperiment(`/use-cases/${id}/pipeline/events`, experimentId)),
