@@ -22,7 +22,7 @@ import { Badge, riskVariant } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { STRATEGY_LIFECYCLE_LABELS } from "@/lib/statusLabels";
 import { api } from "@/lib/api";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent, formatOptional } from "@/lib/utils";
 
 const LEVER_MILESTONES: Record<string, string[]> = {
   marketing: ["Reallocate budget across the affected regions", "Brief channel owners on the new spend targets", "Track weekly spend-to-revenue pacing"],
@@ -182,9 +182,9 @@ export default function StrategyDetail() {
             <Section icon={Heart} title="Customer Impact (current)" compact>
               {dashboard ? (
                 <dl className="grid grid-cols-2 gap-3 text-xs">
-                  <Metric label="Churn Rate" value={`${dashboard.kpis.churn_rate_pct}%`} />
-                  <Metric label="Avg Satisfaction" value={`${dashboard.kpis.avg_satisfaction}/5`} />
-                  <Metric label="Stockout Rate" value={`${dashboard.kpis.stockout_rate_pct}%`} />
+                  <Metric label="Churn Rate" value={formatOptional(dashboard.kpis.churn_rate_pct, "%")} />
+                  <Metric label="Avg Satisfaction" value={formatOptional(dashboard.kpis.avg_satisfaction, "/5")} />
+                  <Metric label="Stockout Rate" value={formatOptional(dashboard.kpis.stockout_rate_pct, "%")} />
                   <Metric label="Avg Order Value" value={formatCurrency(dashboard.kpis.avg_order_value)} />
                 </dl>
               ) : (

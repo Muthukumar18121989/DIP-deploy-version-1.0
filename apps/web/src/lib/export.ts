@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import PptxGenJS from "pptxgenjs";
 import { toPng } from "html-to-image";
 import type { DashboardData, Strategy } from "./types";
-import { formatCurrency } from "./utils";
+import { formatCurrency, formatOptional } from "./utils";
 
 export function exportStrategyToPdf(strategy: Strategy, useCaseName: string) {
   const doc = new jsPDF();
@@ -107,8 +107,8 @@ export function exportDashboardToPdf(dashboard: DashboardData, useCaseName: stri
       ["Total Revenue", formatCurrency(dashboard.kpis.total_revenue)],
       ["Total Orders", dashboard.kpis.total_orders.toLocaleString()],
       ["Avg Order Value", formatCurrency(dashboard.kpis.avg_order_value)],
-      ["Stockout Rate", `${dashboard.kpis.stockout_rate_pct}%`],
-      ["Churn Rate", `${dashboard.kpis.churn_rate_pct}%`],
+      ["Stockout Rate", formatOptional(dashboard.kpis.stockout_rate_pct, "%")],
+      ["Churn Rate", formatOptional(dashboard.kpis.churn_rate_pct, "%")],
       ["Data Quality Score", `${dashboard.kpis.data_quality_score}/100`],
     ],
     styles: { fontSize: 9 },
@@ -144,8 +144,8 @@ export async function exportDashboardToExcel(dashboard: DashboardData, useCaseNa
     { metric: "Total Revenue", value: dashboard.kpis.total_revenue },
     { metric: "Total Orders", value: dashboard.kpis.total_orders },
     { metric: "Avg Order Value", value: dashboard.kpis.avg_order_value },
-    { metric: "Stockout Rate (%)", value: dashboard.kpis.stockout_rate_pct },
-    { metric: "Churn Rate (%)", value: dashboard.kpis.churn_rate_pct },
+    { metric: "Stockout Rate (%)", value: dashboard.kpis.stockout_rate_pct ?? "—" },
+    { metric: "Churn Rate (%)", value: dashboard.kpis.churn_rate_pct ?? "—" },
     { metric: "Data Quality Score", value: dashboard.kpis.data_quality_score },
   ]);
   kpiSheet.getRow(1).font = { bold: true };
@@ -198,8 +198,8 @@ export async function exportDashboardToPptx(dashboard: DashboardData, useCaseNam
     ["Total Revenue", formatCurrency(dashboard.kpis.total_revenue)],
     ["Total Orders", dashboard.kpis.total_orders.toLocaleString()],
     ["Avg Order Value", formatCurrency(dashboard.kpis.avg_order_value)],
-    ["Stockout Rate", `${dashboard.kpis.stockout_rate_pct}%`],
-    ["Churn Rate", `${dashboard.kpis.churn_rate_pct}%`],
+    ["Stockout Rate", formatOptional(dashboard.kpis.stockout_rate_pct, "%")],
+    ["Churn Rate", formatOptional(dashboard.kpis.churn_rate_pct, "%")],
     ["Data Quality Score", `${dashboard.kpis.data_quality_score}/100`],
   ];
   kpiSlide.addTable(

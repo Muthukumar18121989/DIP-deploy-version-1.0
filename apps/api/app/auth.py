@@ -8,7 +8,7 @@ import hmac
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
@@ -73,6 +73,29 @@ def get_current_user(user: User | None = Depends(get_current_user_optional)) -> 
     if user is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
+
+
+def get_current_user_for_stream(
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+    db: DbSession = Depends(get_db),
+) -> User:
+    """Same check as get_current_user, but also accepts ?token=. The browser's
+    EventSource API cannot send an Authorization header, so the pipeline
+    stream is the one route that reads the session token from the URL."""
+    user = _resolve_bearer_user(authorization, db)
+    if user is None and token:
+        user = _resolve_bearer_user(f"Bearer {token}", db)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
+def can_access_use_case(user: User, owner_user_id: str | None) -> bool:
+    """Admins see everything; everyone else sees only use cases they own.
+    Use cases created before accounts existed have no owner and are visible
+    to admins only."""
+    return user.role == "admin" or (owner_user_id is not None and owner_user_id == user.id)
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:

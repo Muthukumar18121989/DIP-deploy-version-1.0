@@ -27,3 +27,8 @@ export function formatNumber(value: number): string {
 export function formatTooltipCurrency(value: unknown): string {
   return typeof value === "number" ? formatCurrency(value) : String(value);
 }
+
+/** A KPI that may be missing from the customer's data: "—" instead of "null%". */
+export function formatOptional(value: number | null | undefined, suffix = ""): string {
+  return value === null || value === undefined ? "—" : `${value}${suffix}`;
+}

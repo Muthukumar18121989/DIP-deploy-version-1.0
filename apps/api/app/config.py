@@ -2,13 +2,15 @@ import os
 from pathlib import Path
 
 API_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = API_ROOT / "data"
-DATA_DIR.mkdir(exist_ok=True)
+# DIP_DATA_DIR lets tests (and deployments) point the database and artifact
+# store somewhere other than the repo checkout.
+DATA_DIR = Path(os.environ.get("DIP_DATA_DIR") or API_ROOT / "data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "app.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-DEMO_ROW_COUNT = 150_000
+DEMO_ROW_COUNT = int(os.environ.get("DIP_DEMO_ROW_COUNT", "150000"))
 
 # CORS_ORIGINS: comma-separated list of allowed frontend origins via env var
 # (e.g. "https://your-frontend.vercel.app"), on top of the local dev defaults.

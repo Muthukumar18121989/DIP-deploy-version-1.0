@@ -119,3 +119,16 @@ def delete_artifacts(artifact_id: str) -> None:
     path = DATA_DIR / artifact_id
     if path.exists():
         shutil.rmtree(path)
+
+
+def save_df(artifact_id: str, name: str, df: pd.DataFrame) -> None:
+    """A named dataframe that isn't the pipeline's raw input (e.g. an upload
+    still waiting for its columns to be mapped)."""
+    df.to_parquet(artifact_dir(artifact_id) / f"{name}.parquet", index=False)
+
+
+def load_df(artifact_id: str, name: str) -> pd.DataFrame | None:
+    path = artifact_dir(artifact_id) / f"{name}.parquet"
+    if not path.exists():
+        return None
+    return pd.read_parquet(path)

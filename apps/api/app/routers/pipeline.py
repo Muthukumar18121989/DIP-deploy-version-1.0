@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, get_db
-from app.deps import get_use_case_or_404, resolve_experiment_id
+from app.deps import get_use_case_for_stream_or_404, get_use_case_or_404, resolve_experiment_id
 from app.models import Experiment, Strategy, UseCase
 from app.pipeline import store
 from app.pipeline.features import REQUIRED_SALES_COLUMNS
@@ -22,8 +22,10 @@ router = APIRouter(prefix="/api/use-cases/{use_case_id}", tags=["pipeline"])
 def stream_pipeline(
     use_case_id: str,
     db: Session = Depends(get_db),
-    use_case: UseCase = Depends(get_use_case_or_404),
+    use_case: UseCase = Depends(get_use_case_for_stream_or_404),
 ):
+    if use_case.status == "needs_mapping":
+        raise HTTPException(status_code=409, detail="Map the uploaded file's columns before running the pipeline.")
     df = store.load_raw_df(use_case_id)
     if df is None:
         raise HTTPException(status_code=404, detail="No data attached to this use case yet.")
@@ -151,6 +153,8 @@ def get_pipeline_events(
     """
     if experiment_id:
         experiment = db.get(Experiment, experiment_id)
+        if experiment is not None and experiment.use_case_id != use_case_id:
+            experiment = None
     else:
         experiment = db.execute(
             select(Experiment)

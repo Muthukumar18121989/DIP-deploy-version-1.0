@@ -235,3 +235,8 @@ class AdminUserOut(BaseModel):
     user: UserOut
     use_case_count: int
     use_cases: list[AdminUseCaseOut]
+
+
+class ColumnMappingIn(BaseModel):
+    # role key -> column name in the uploaded file; omitted/empty = not in my data
+    mapping: dict[str, str | None]

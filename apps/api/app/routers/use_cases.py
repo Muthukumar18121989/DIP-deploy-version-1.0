@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user_optional
+from app.auth import get_current_user
 from app.db import get_db
-from app.deps import get_use_case_or_404
+from app.deps import accessible_use_case_ids, get_use_case_or_404
 from app.models import ConnectorConfig, Experiment, Strategy, UseCase, User
 from app.pipeline import store
 from app.schemas import UseCaseCreate, UseCaseOut, UseCaseSummaryOut, UseCaseUpdate
@@ -69,15 +69,13 @@ def _summarize(db: Session, use_case: UseCase) -> UseCaseSummaryOut:
 def create_use_case(
     payload: UseCaseCreate,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     use_case = UseCase(**payload.model_dump())
-    # Anonymous creation (no logged-in user) is untouched — owner stays the
-    # existing "Unassigned" default. Logged-in creation attributes it, which
-    # is what the Admin Dashboard reads to show "this user's use cases".
-    if current_user is not None:
-        use_case.owner_user_id = current_user.id
-        use_case.owner = current_user.name
+    # Every use case belongs to the account that created it; that ownership
+    # is what every other route checks (see app/deps.py).
+    use_case.owner_user_id = current_user.id
+    use_case.owner = current_user.name
     db.add(use_case)
     db.commit()
     db.refresh(use_case)
@@ -85,8 +83,12 @@ def create_use_case(
 
 
 @router.get("", response_model=list[UseCaseSummaryOut])
-def list_use_cases(db: Session = Depends(get_db)):
-    use_cases = db.execute(select(UseCase).order_by(UseCase.updated_at.desc())).scalars().all()
+def list_use_cases(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = select(UseCase).order_by(UseCase.updated_at.desc())
+    allowed = accessible_use_case_ids(db, current_user)
+    if allowed is not None:
+        query = query.where(UseCase.id.in_(allowed))
+    use_cases = db.execute(query).scalars().all()
     return [_summarize(db, uc) for uc in use_cases]
 
 
@@ -113,6 +115,7 @@ def duplicate_use_case(
     use_case_id: str,
     db: Session = Depends(get_db),
     use_case: UseCase = Depends(get_use_case_or_404),
+    current_user: User = Depends(get_current_user),
 ):
     clone = UseCase(
         name=f"{use_case.name} (Copy)",
@@ -121,7 +124,8 @@ def duplicate_use_case(
         kpi=use_case.kpi,
         description=use_case.description,
         industry=use_case.industry,
-        owner=use_case.owner,
+        owner=current_user.name,
+        owner_user_id=current_user.id,
         tags=list(use_case.tags),
         status="created",
     )
@@ -131,6 +135,9 @@ def duplicate_use_case(
     raw_df = store.load_raw_df(use_case_id)
     if raw_df is not None:
         store.save_raw_df(clone.id, raw_df)
+        data_meta = store.load_json(use_case_id, "data_meta")
+        if data_meta is not None:
+            store.save_json(clone.id, "data_meta", data_meta)
         clone.status = use_case.status
         clone.data_source = use_case.data_source
         clone.row_count = use_case.row_count

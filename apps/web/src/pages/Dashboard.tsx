@@ -27,7 +27,7 @@ import { PUBLISH_CONNECTORS } from "@/lib/connectors";
 import { CHART_1 } from "@/lib/chartColors";
 import { api } from "@/lib/api";
 import { useUseCase } from "@/lib/hooks";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent, formatOptional } from "@/lib/utils";
 import { WIDGET_CAPABILITIES, WIDGET_ORDER, type WidgetChanges, type WidgetContext } from "@/lib/widgetTypes";
 import type { DashboardData } from "@/lib/types";
 
@@ -260,15 +260,15 @@ export default function Dashboard() {
             <StatTile label="Avg Order Value" value={formatCurrency(dashboard.kpis.avg_order_value)} icon={Package} />
             <StatTile
               label="Stockout Rate"
-              value={`${dashboard.kpis.stockout_rate_pct}%`}
+              value={formatOptional(dashboard.kpis.stockout_rate_pct, "%")}
               icon={AlertTriangle}
-              tone={dashboard.kpis.stockout_rate_pct > 10 ? "critical" : "default"}
+              tone={(dashboard.kpis.stockout_rate_pct ?? 0) > 10 ? "critical" : "default"}
             />
             <StatTile
               label="Churn Rate"
-              value={`${dashboard.kpis.churn_rate_pct}%`}
+              value={formatOptional(dashboard.kpis.churn_rate_pct, "%")}
               icon={Heart}
-              tone={dashboard.kpis.churn_rate_pct > 10 ? "warning" : "default"}
+              tone={(dashboard.kpis.churn_rate_pct ?? 0) > 10 ? "warning" : "default"}
             />
             <StatTile label="Data Quality" value={`${dashboard.kpis.data_quality_score}/100`} icon={Gauge} tone="good" />
           </div>

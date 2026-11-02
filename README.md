@@ -99,6 +99,42 @@ npm run dev
 
 App at `http://localhost:5173`, proxying `/api/*` to the backend.
 
+### Tests
+
+```bash
+cd apps/api
+pip install -r requirements-dev.txt
+pytest
+```
+
+The tests use a throwaway data directory (`DIP_DATA_DIR`) and a small demo
+dataset (`DIP_DEMO_ROW_COUNT`), so they never touch `apps/api/data/`.
+
+## Accounts and data access
+
+Every API route except sign-in, registration and `/health` requires a valid
+session, and each use case belongs to the account that created it. Other
+accounts get a 404 for it and everything under it (data, experiments,
+strategies, monitoring, widgets, connectors). Admins can see every use case.
+Use cases created before ownership was enforced have no owner and are
+visible to admins only.
+
+## Bringing your own data
+
+Upload any CSV with at least 6 months of history. If its columns don't
+already match DIP's Sales layout, the Data Sources page asks you to match
+them: a date (or year and month), the KPI to explain, and optionally region,
+category, segment, channel, and levers such as price, marketing spend,
+discount and inventory. DIP guesses the mapping from the column names. Roles
+you leave out are filled with neutral constants, so models ignore them,
+recommendations never touch them, and the dashboard shows "—" for KPIs your
+data doesn't have.
+
+Recommendations are built from your data: each mapped lever is tested up and
+down, and every region and category is moved only as far as its own history
+says is normal (its 80th or 20th percentile month), and only where it has
+drifted from that range.
+
 ## Deploying to a private GCP VM
 
 If you want the platform reachable only by people who can authenticate to
